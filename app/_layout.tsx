@@ -3,14 +3,21 @@ import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
-import { Link, Stack, useRouter, useSegments } from "expo-router";
+import { Href, Link, Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SecureStore from "expo-secure-store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { UserInactivityProvider } from "@/context/UserInactivity";
 
 const queryClient = new QueryClient();
 
@@ -82,14 +89,18 @@ function InitialLayout() {
     const inAuthGroup = segments[0] === "(authenticated)";
 
     if (isSignedIn && !inAuthGroup) {
-      router.replace("/(authenticated)/(tabs)/home" as any);
+      router.replace("/(authenticated)/(tabs)/home" as Href);
     } else if (!isSignedIn) {
       router.replace("/");
     }
   }, [isSignedIn]);
 
   if (!loaded || !isLoaded) {
-    return <Text>Carregando...</Text>;
+    return (
+      <View style={{ justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size={"large"} color={Colors.primary} />
+      </View>
+    );
   }
 
   return (
@@ -192,6 +203,24 @@ function InitialLayout() {
           ),
         }}
       />
+      <Stack.Screen
+        name="(authenticated)/(modals)/lock"
+        options={{ headerShown: false, animation: "none" }}
+      />
+      <Stack.Screen
+        name="(authenticated)/(modals)/account"
+        options={{
+          presentation: "transparentModal",
+          animation: "fade",
+          title: "",
+          headerTransparent: true,
+          headerLeft: () => (
+            <TouchableOpacity onPress={router.back}>
+              <Ionicons name="close-outline" size={34} color={"#fff"} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
     </Stack>
   );
 }
@@ -200,10 +229,16 @@ function RootLayoutNav() {
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <StatusBar style="light" backgroundColor="transparent" translucent />
-          <InitialLayout />
-        </GestureHandlerRootView>
+        <UserInactivityProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <StatusBar
+              style="light"
+              backgroundColor="transparent"
+              translucent
+            />
+            <InitialLayout />
+          </GestureHandlerRootView>
+        </UserInactivityProvider>
       </QueryClientProvider>
     </ClerkProvider>
   );
